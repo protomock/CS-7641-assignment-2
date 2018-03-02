@@ -13,26 +13,22 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel
-madelon = pd.read_hdf('datasets.hdf','madelon')        
-madelonX = madelon.drop('Class',1).copy().values
-madelonY = madelon['Class'].copy().values
+df = pd.read_csv('https://raw.githubusercontent.com/protomock/data/master/ks-projects-201612.csv', index_col=0)
+ksProjectsX = df.drop(['usd pledged ', 'Unnamed: 13', 'Unnamed: 14', 'Unnamed: 15',  'Unnamed: 16'],1).copy().values
+ksProjectsY = df['usd pledged '].copy().values
 
+trgX, tstX, trgY, tstY = ms.train_test_split(ksProjectsX, ksProjectsY, test_size=0.3, random_state=0)     
 
-
-
-
-madelon_trgX, madelon_tstX, madelon_trgY, madelon_tstY = ms.train_test_split(madelonX, madelonY, test_size=0.3, random_state=0,stratify=madelonY)     
-
-pipe = Pipeline([('Scale',StandardScaler()),
-                 ('Cull1',SelectFromModel(RandomForestClassifier(random_state=1),threshold='median')),
-                 ('Cull2',SelectFromModel(RandomForestClassifier(random_state=2),threshold='median')),
-                 ('Cull3',SelectFromModel(RandomForestClassifier(random_state=3),threshold='median')),
-                 ('Cull4',SelectFromModel(RandomForestClassifier(random_state=4),threshold='median')),])
-trgX = pipe.fit_transform(madelon_trgX,madelon_trgY)
-trgY = np.atleast_2d(madelon_trgY).T
-tstX = pipe.transform(madelon_tstX)
-tstY = np.atleast_2d(madelon_tstY).T
-trgX, valX, trgY, valY = ms.train_test_split(trgX, trgY, test_size=0.2, random_state=1,stratify=trgY)     
+# pipe = Pipeline([('Scale',StandardScaler()),
+#                  ('Cull1',SelectFromModel(RandomForestClassifier(random_state=1),threshold='median')),
+#                  ('Cull2',SelectFromModel(RandomForestClassifier(random_state=2),threshold='median')),
+#                  ('Cull3',SelectFromModel(RandomForestClassifier(random_state=3),threshold='median')),
+#                  ('Cull4',SelectFromModel(RandomForestClassifier(random_state=4),threshold='median')),])
+# trgX = pipe.fit_transform(ksProjects_trgX, ksProjects_trgY)
+trgY = np.atleast_2d(trgY).T
+# tstX = pipe.transform(ksProjects_trgX)
+tstY = np.atleast_2d(tstY).T
+trgX, valX, trgY, valY = ms.train_test_split(trgX, trgY, test_size=0.2, random_state=1)     
 tst = pd.DataFrame(np.hstack((tstX,tstY)))
 trg = pd.DataFrame(np.hstack((trgX,trgY)))
 val = pd.DataFrame(np.hstack((valX,valY)))
