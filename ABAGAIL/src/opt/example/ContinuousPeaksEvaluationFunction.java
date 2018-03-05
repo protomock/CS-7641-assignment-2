@@ -14,7 +14,6 @@ public class ContinuousPeaksEvaluationFunction implements EvaluationFunction {
      * The t value
      */
     private int t;
-	public long fevals;
     
     /**
      * Make a new continuous peaks function
@@ -57,7 +56,6 @@ public class ContinuousPeaksEvaluationFunction implements EvaluationFunction {
         if (max1 > t && max0 > t) {
             r = data.size();
         }
-		this.fevals = this.fevals +1;
         return Math.max(max1, max0) + r;
     }
 }

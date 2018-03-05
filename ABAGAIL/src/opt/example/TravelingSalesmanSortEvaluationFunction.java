@@ -19,7 +19,7 @@ public class TravelingSalesmanSortEvaluationFunction extends TravelingSalesmanEv
     public TravelingSalesmanSortEvaluationFunction(double[][] points) {
         super(points);
     }
-	public long fevals;
+
     /**
      * @see opt.EvaluationFunction#value(opt.OptimizationData)
      */
@@ -35,7 +35,6 @@ public class TravelingSalesmanSortEvaluationFunction extends TravelingSalesmanEv
             distance += getDistance(order[i], order[i+1]);
         }
         distance += getDistance(order[order.length - 1], order[0]);
-		this.fevals = this.fevals +1;
         return 1/distance;
     }
 

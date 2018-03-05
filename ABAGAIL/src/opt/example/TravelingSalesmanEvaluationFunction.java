@@ -12,7 +12,6 @@ public abstract class TravelingSalesmanEvaluationFunction implements EvaluationF
      * The distance between city i and j
      */
     private double[][] distances;
-	public long fevals;
     /**
      * Make a new traveling salesman  evaluation function
      * @param points the points at which the cities are located

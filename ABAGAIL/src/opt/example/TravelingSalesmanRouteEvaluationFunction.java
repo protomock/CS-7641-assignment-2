@@ -19,7 +19,7 @@ public class TravelingSalesmanRouteEvaluationFunction extends TravelingSalesmanE
     public TravelingSalesmanRouteEvaluationFunction(double[][] points) {
         super(points);
     }
-	public long fevals;
+
     /**
      * @see opt.EvaluationFunction#value(opt.OptimizationData)
      */
@@ -29,7 +29,6 @@ public class TravelingSalesmanRouteEvaluationFunction extends TravelingSalesmanE
             distance += getDistance(d.getDiscrete(i), d.getDiscrete(i+1));
         }
         distance += getDistance(d.getDiscrete(d.size() - 1), d.getDiscrete(0));
-		this.fevals = this.fevals +1;
         return 1/distance;
     }
 

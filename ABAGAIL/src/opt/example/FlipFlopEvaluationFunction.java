@@ -13,7 +13,6 @@ public class FlipFlopEvaluationFunction implements EvaluationFunction {
     /**
      * @see opt.EvaluationFunction#value(opt.OptimizationData)
      */
-	 public long fevals;
     public double value(Instance d) {
         Vector data = d.getData();
         double val = 0;
@@ -22,7 +21,6 @@ public class FlipFlopEvaluationFunction implements EvaluationFunction {
                 val++;
             }
         }
-		this.fevals = this.fevals + 1;
         return val;
     }
 }

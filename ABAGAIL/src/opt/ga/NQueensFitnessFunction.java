@@ -13,7 +13,7 @@ public class NQueensFitnessFunction implements EvaluationFunction {
 	public NQueensFitnessFunction() {
 		// TODO Auto-generated constructor stub
 	}
-	public long fevals;
+	
 	private NQueensBoardGame currentBoard;
 
 	/**
@@ -63,7 +63,7 @@ public class NQueensFitnessFunction implements EvaluationFunction {
 		//System.out.println("===============");
 		//System.out.println(board.toString());
 		//System.out.println("================");
-		this.fevals = this.fevals +1;
+		
 		return fitness;
 	}
 

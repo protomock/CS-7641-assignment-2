@@ -10,7 +10,7 @@ import shared.Instance;
  * @version 1.0
  */
 public class TwoColorsEvaluationFunction implements EvaluationFunction {
-	public long fevals;
+
     /**
      * @see opt.EvaluationFunction#value(opt.OptimizationData)
      */
@@ -22,7 +22,7 @@ public class TwoColorsEvaluationFunction implements EvaluationFunction {
                 val++;
             }
         }
-		this.fevals = this.fevals +1;
+
         return val;
     }
 
