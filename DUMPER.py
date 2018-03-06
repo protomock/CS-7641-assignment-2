@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import re
 import string
+import math
 from scipy.stats.mstats import winsorize 
 import matplotlib.pyplot as plt
 
@@ -93,7 +94,7 @@ fig, ax = plt.subplots(figsize=(12, 12))
 ax.matshow(corr)
 plt.xticks(range(len(corr.columns)), corr.columns)
 plt.yticks(range(len(corr.columns)), corr.columns)
-plt.show()
+# plt.show()
 
 # Drop correlated columns
 df = df.drop(['deadline_year','pledged ', 'country '], 1)
@@ -103,10 +104,15 @@ df['usd pledged '] = pd.to_numeric(df['usd pledged '])
 
 # Blend outliers
 df['usd pledged '].plot.box(vert=False)
-plt.show()
+# plt.show()
 df['usd pledged '] = winsorize(df['usd pledged '], limits=[0.05, 0.05])
 df['usd pledged '].plot.hist(bins=10)
-plt.show()
+# plt.show()
+
+# # Transform data to reduce right skewiness
+# df['usd pledged '] = df['usd pledged '].apply(lambda x: math.log10(x) if x > 0 else 0)
+# df['usd pledged '].plot.hist(bins=10)
+# plt.show()
 
 # Set bins
 df['bins'] = pd.cut(df['usd pledged '], bins=10)

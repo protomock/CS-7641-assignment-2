@@ -26,7 +26,7 @@ import opt.ga.StandardGeneticAlgorithm as StandardGeneticAlgorithm
 
 TRAIN_INPUT_FILE = os.path.join("m_trg.csv")
 TEST_INPUT_FILE = os.path.join("m_trg.csv")
-OUTFILE = './NN_OUTPUT/BACKPROP_LOG.txt'
+OUTFILE = "./NN_OUTPUT/"
 
 INPUT_LAYER = 7
 HIDDEN_LAYER = 4
@@ -38,9 +38,9 @@ def initialize_instances(file):
     """Read the kickstarter.txt CSV data into a list of instances."""
     instances = []
 
-    # Read in the abalone.txt CSV file
-    with open(file, "r") as abalone:
-        reader = csv.reader(abalone)
+    # Read in the CSV file
+    with open(file, "r") as kickstarter:
+        reader = csv.reader(kickstarter)
 
         for row in reader:
             instance = Instance([float(value) for value in row[:-1]])
@@ -91,59 +91,65 @@ def main():
     networks = []  # BackPropagationNetwork
     nnop = []  # NeuralNetworkOptimizationProblem
     oa = []  # OptimizationAlgorithm
-    oa_names = ['Backprop', 'RHC']
+    oa_names = ["Backprop", "RHC", "SA", "GA"]
     results = ""
 
-    for name in oa_names:
-        classification_network = factory.createClassificationNetwork(
-            [INPUT_LAYER, HIDDEN_LAYER, HIDDEN_LAYER, OUTPUT_LAYER])
-        networks.append(classification_network)
-        nnop.append(NeuralNetworkOptimizationProblem(data_set, classification_network, measure))
+    for i in range(500):
+        for name in oa_names:
+            classification_network = factory.createClassificationNetwork(
+                [INPUT_LAYER, HIDDEN_LAYER, HIDDEN_LAYER, OUTPUT_LAYER])
+            networks.append(classification_network)
+            nnop.append(NeuralNetworkOptimizationProblem(data_set, classification_network, measure))
 
-    oa.append(StochasticBackPropagationTrainer(
-        data_set, classification_network, measure, rule))
-    oa.append(RandomizedHillClimbing(nnop[0]))
-    # oa.append(SimulatedAnnealing(1E11, .95, nnop[1]))
-    # oa.append(StandardGeneticAlgorithm(200, 100, 10, nnop[2]))
+        oa.append(StochasticBackPropagationTrainer(
+            data_set, classification_network, measure, rule))
+        oa.append(RandomizedHillClimbing(nnop[1]))
+        oa.append(SimulatedAnnealing(1E11, .95, nnop[2]))
+        oa.append(StandardGeneticAlgorithm(200, 100, 10, nnop[3]))
 
-    for i, name in enumerate(oa_names):
-        start = time.time()
-        correct = 0
-        incorrect = 0
+        for i, name in enumerate(oa_names):
+            start = time.time()
+            correct = 0
+            incorrect = 0
 
-        trainer = ConvergenceTrainer(oa[i])
-        train(trainer, networks[i], oa_names[i], train_instances, measure)
-        end = time.time()
-        training_time = end - start
+            trainer = ConvergenceTrainer(oa[i])
+            train(trainer, networks[i], oa_names[i], train_instances, measure)
+            end = time.time()
+            training_time = end - start
+            
+            if name != "Backprop":
+                optimal_instance = oa[i].getOptimal()
+                networks[i].setWeights(optimal_instance.getData())
 
-        start = time.time()
-        for instance in test_instances:
-            networks[i].setInputValues(instance.getData())
-            networks[i].run()
+            start = time.time()
+            for instance in test_instances:
+                networks[i].setInputValues(instance.getData())
+                networks[i].run()
 
-            predicted = instance.getLabel().getContinuous()
-            actual = networks[i].getOutputValues().get(0)
+                predicted = instance.getLabel().getContinuous()
+                actual = networks[i].getOutputValues().get(0)
 
-            if abs(predicted - actual) < 0.5:
-                correct += 1
-            else:
-                incorrect += 1
+                if abs(predicted - actual) < 0.5:
+                    correct += 1
+                else:
+                    incorrect += 1
 
-        end = time.time()
-        testing_time = end - start
+            end = time.time()
+            testing_time = end - start
 
-        txt = '{},{}'.format(
-            float(correct)/(correct+incorrect)*100.0, testing_time)
-        results += "\nResults for %s: \nCorrectly classified %d instances." % (
-            name, correct)
-        results += "\nIncorrectly classified %d instances.\nPercent correctly classified: %0.03f%%" % (
-            incorrect, float(correct)/(correct+incorrect)*100.0)
-        results += "\nTraining time: %0.03f seconds" % (training_time,)
-        results += "\nTesting time: %0.03f seconds\n" % (testing_time,)
-        with open(OUTFILE, 'a+') as f:
-            f.write(txt)
+            results += "\nResults for %s: \nCorrectly classified %d instances." % (
+                name, correct)
+            results += "\nIncorrectly classified %d instances.\nPercent correctly classified: %0.03f%%" % (
+                incorrect, float(correct)/(correct+incorrect)*100.0)
+            results += "\nTraining time: %0.03f seconds" % (training_time,)
+            results += "\nTesting time: %0.03f seconds\n" % (testing_time,)
 
-    print results
+            txt = "{},{},{}\n".format(
+                float(correct)/(correct+incorrect)*100.0, training_time, testing_time)
+            with open(OUTFILE + str(name), "a+") as f:
+                f.write(txt)
+
+        print results
 
 
 if __name__ == "__main__":
