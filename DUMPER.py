@@ -68,17 +68,10 @@ df = df[~pd.to_datetime(df['deadline '], errors='coerce').isnull()]
 # Convert string datetime to actual datetime
 df['launched '] = pd.to_datetime(df['launched '])
 df['launched_year'] = df['launched '].dt.year
-# df['launched_month'] = df['launched '].dt.month
-# df['launched_day'] = df['launched '].dt.day
-# df['launched_hour'] = df['launched '].dt.hour
-# df['launched_minute'] = df['launched '].dt.minute
 
 df['deadline '] = pd.to_datetime(df['deadline '])
 df['deadline_year'] = df['deadline '].dt.year
-# df['deadline_month'] = df['deadline '].dt.month
-# df['deadline_day'] = df['deadline '].dt.day
-# df['deadline_hour'] = df['deadline '].dt.hour
-# df['deadline_minute'] = df['deadline '].dt.minute
+
 # drop columns already represented
 df = df.drop(['launched ', 'deadline '], 1)
 
@@ -94,7 +87,7 @@ fig, ax = plt.subplots(figsize=(12, 12))
 ax.matshow(corr)
 plt.xticks(range(len(corr.columns)), corr.columns)
 plt.yticks(range(len(corr.columns)), corr.columns)
-# plt.show()
+plt.show()
 
 # Drop correlated columns
 df = df.drop(['deadline_year','pledged ', 'country '], 1)
@@ -104,19 +97,16 @@ df['usd pledged '] = pd.to_numeric(df['usd pledged '])
 
 # Blend outliers
 df['usd pledged '].plot.box(vert=False)
-# plt.show()
+plt.show()
 df['usd pledged '] = winsorize(df['usd pledged '], limits=[0.05, 0.05])
 df['usd pledged '].plot.hist(bins=10)
-# plt.show()
-
-# # Transform data to reduce right skewiness
-# df['usd pledged '] = df['usd pledged '].apply(lambda x: math.log10(x) if x > 0 else 0)
-# df['usd pledged '].plot.hist(bins=10)
-# plt.show()
+plt.show()
 
 # Set bins
 df['bins'] = pd.cut(df['usd pledged '], bins=10)
 df['bins'] = LabelEncoder().fit_transform(df['bins'])
+df['bins'].plot.hist(bins=10)
+plt.show()
 
 # Drop the usd pledged
 df = df.drop(['usd pledged '], 1)

@@ -5,7 +5,9 @@ from time import clock
 from itertools import product
 from array import array
 
-sys.path.append("C:/MOOCs/CS 7641/proj2/ABAGAIL.jar")
+sys.path.append(
+    "/Users/chutchens/workspace/CS-7641-assignment-2/ABAGAIL/ABAGAIL.jar")
+
 import java.io.FileReader as FileReader
 import java.io.File as File
 import java.lang.String as String
@@ -62,7 +64,8 @@ points = [[0 for x in xrange(2)] for x in xrange(N)]
 for i in range(0, len(points)):
     points[i][0] = random.nextDouble()
     points[i][1] = random.nextDouble()
-outfile = './TSP/TSP_@ALG@_@N@_LOG.txt'
+
+outfile = './TSP/TSP_@ALG@_LOG.txt'
 ef = TravelingSalesmanRouteEvaluationFunction(points)
 odd = DiscretePermutationDistribution(N)
 nf = SwapNeighbor()
@@ -74,16 +77,17 @@ gap = GenericGeneticAlgorithmProblem(ef, odd, mf, cf)
 #MIMIC
 fill = [N] * N
 ranges = array('i', fill)
-ef = TravelingSalesmanSortEvaluationFunction(points);
-odd = DiscreteUniformDistribution(ranges);
+ef = TravelingSalesmanSortEvaluationFunction(points)
+odd = DiscreteUniformDistribution(ranges)
+
+fname = outfile.replace('@ALG@','MIMIC')
+with open(fname,'w') as f:
+	f.write('iterations,fitness,time,samples,keep,m,trial\n')
 
 for t in range(numTrials):
 	for samples,keep,m in product([100],[50],[0.1,0.3,0.5,0.7,0.9]):
-		fname = outfile.replace('@ALG@','MIMIC{}_{}_{}'.format(samples,keep,m)).replace('@N@',str(t+1))
-		df = DiscreteDependencyTree(m, ranges); 
-		with open(fname,'w') as f:
-			f.write('iterations,fitness,time,fevals\n')
-		ef = TravelingSalesmanSortEvaluationFunction(points);
+		df = DiscreteDependencyTree(m, ranges)
+		ef = TravelingSalesmanSortEvaluationFunction(points)
 		pop = GenericProbabilisticOptimizationProblem(ef, odd, df)
 		mimic = MIMIC(samples, keep, pop)
 		fit = FixedIterationTrainer(mimic, 10)
@@ -93,10 +97,8 @@ for t in range(numTrials):
 			fit.train()
 			elapsed = time.clock()-start
 			times.append(times[-1]+elapsed)
-			fevals = ef.fevals
 			score = ef.value(mimic.getOptimal())
-			ef.fevals -= 1
-			st = '{},{},{},{}\n'.format(i,score,times[-1],fevals)
+			st = '{},{},{},{},{},{},{}\n'.format(i,score,times[-1],samples,keep,m,t+1)
 			print st
 			with open(fname,'a') as f:
 				f.write(st)
@@ -104,10 +106,12 @@ for t in range(numTrials):
 
 
 # RHC
+fname = outfile.replace('@ALG@','RHC')
+with open(fname,'w') as f:
+		f.write('iterations,fitness,time,trial\n')
+
 for t in range(numTrials):
-	fname = outfile.replace('@ALG@','RHC').replace('@N@',str(t+1))
-	with open(fname,'w') as f:
-		f.write('iterations,fitness,time,fevals\n')
+	fname = outfile.replace('@ALG@','RHC')
 	ef = TravelingSalesmanRouteEvaluationFunction(points)
 	hcp = GenericHillClimbingProblem(ef, odd, nf)
 	rhc = RandomizedHillClimbing(hcp)
@@ -118,21 +122,20 @@ for t in range(numTrials):
 		fit.train()
 		elapsed = time.clock()-start
 		times.append(times[-1]+elapsed)
-		fevals = ef.fevals
 		score = ef.value(rhc.getOptimal())
-		ef.fevals -= 1
-		st = '{},{},{},{}\n'.format(i,score,times[-1],fevals)
+		st = '{},{},{},{}\n'.format(i,score,times[-1],t+1)
 		print st	
 		with open(fname,'a') as f:
 			f.write(st)
 
 
 # SA
+fname = outfile.replace('@ALG@','SA')
+with open(fname,'w') as f:
+	f.write('iterations,fitness,time,CE,trial\n')
+
 for t in range(numTrials):
 	for CE in [0.15,0.35,0.55,0.75,0.95]:
-		fname = outfile.replace('@ALG@','SA{}'.format(CE)).replace('@N@',str(t+1))
-		with open(fname,'w') as f:
-			f.write('iterations,fitness,time,fevals\n')
 		ef = TravelingSalesmanRouteEvaluationFunction(points)
 		hcp = GenericHillClimbingProblem(ef, odd, nf)
 		sa = SimulatedAnnealing(1E10, CE, hcp)
@@ -143,20 +146,19 @@ for t in range(numTrials):
 			fit.train()
 			elapsed = time.clock()-start
 			times.append(times[-1]+elapsed)
-			fevals = ef.fevals
 			score = ef.value(sa.getOptimal())
-			ef.fevals -= 1
-			st = '{},{},{},{}\n'.format(i,score,times[-1],fevals)
+			st = '{},{},{},{},{}\n'.format(i,score,times[-1],CE,t+1)
 			print st
 			with open(fname,'a') as f:
 				f.write(st)
 
 #GA
+fname = outfile.replace('@ALG@',"GA")
+with open(fname,'w') as f:
+	f.write('iterations,fitness,time,pop,mate,mutate,trial\n')
+
 for t in range(numTrials):
 	for pop,mate,mutate in product([100],[50,30,10],[50,30,10]):
-		fname = outfile.replace('@ALG@','GA{}_{}_{}'.format(pop,mate,mutate)).replace('@N@',str(t+1))
-		with open(fname,'w') as f:
-			f.write('iterations,fitness,time,fevals\n')
 		ef = TravelingSalesmanRouteEvaluationFunction(points)
 		gap = GenericGeneticAlgorithmProblem(ef, odd, mf, cf)
 		ga = StandardGeneticAlgorithm(pop, mate, mutate, gap)
@@ -167,10 +169,8 @@ for t in range(numTrials):
 			fit.train()
 			elapsed = time.clock()-start
 			times.append(times[-1]+elapsed)
-			fevals = ef.fevals
 			score = ef.value(ga.getOptimal())
-			ef.fevals -= 1
-			st = '{},{},{},{}\n'.format(i,score,times[-1],fevals)
+			st = '{},{},{},{},{},{},{}\n'.format(i,score,times[-1],pop,mate,mutate,t+1)
 			print st
 			with open(fname,'a') as f:
 				f.write(st)

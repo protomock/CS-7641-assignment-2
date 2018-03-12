@@ -1,0 +1,284 @@
+---
+title: "HW2 - Randomized Optimizations"
+author: "chutchens3"
+date: "3/9/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath("./NN_OUTPUT"))
+```
+
+# Overview
+
+The goal of the first part of the assignment was to implment and compare local random search algorthims using the neural network from assignment 1. Since the neural network used in assignment 1 did not have a complicated enough dataset, it was decided to make another one with a better, more challenging data set. The data set that was chosen was the Kickstarter dataset from kaggle. This dataset has 300,000 kickstarter projects, 14 attribute columns and the outcome column is a continuous value. This paper will demonstrate the observations that were made when applying these randomized optimization techniques to the kickstarter nueral network.
+
+# Data perprocessing
+
+The kickstarter data really needed a lot of preprocessing. First, the bad data that existed needed to be fixed or removed. This included instances that had values mapped to the wrong column. After fixing most of the records, approximately 600 where removed. After making the data consistent, the categorical values needed to be encoded. This accounted for 5 attributes, which where encoded using one hot encoding. Next, the two date attributes were broken into two vectors containing the month, day, and year. After breaking up the date fields the data was then checked for attributes with positive correlation. Highly correlated attributes add no value to the model and are candidates for reducing demensionality. This resulted in the removal of 3 attributes. Next, the outliers needed to be removed using a technique called winorization, which essentially "blends" the outlier to the next highest percentile. Outliers are removed because they can exist through error or they are highly unlikely. This made it eaiser to bin the outcome column. Binning the outcome column essentially limits the hypothesis space to a few categorical bins. The outcome is usd pledged column, this means that the model would predict a bin value versus a number. After all the data preprocessing, 7 numerical attributes were remaining with a binned outcome column. The data was then split into a test, training, and validation to be consumed by the nueral networks.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("gridExtra")
+library("grid")
+library("png")
+img1 <- grid::rasterGrob(as.raster(readPNG("../images/ks-corr.png")),
+                            interpolate = FALSE)
+
+img2 <- grid::rasterGrob(as.raster(readPNG("../images/ks-histo-wins.png")),
+                            interpolate = FALSE)
+grid.arrange(img1, img2, ncol = 2)
+```
+
+
+# Backpropagation
+
+Since a new dataset was used for this assignment, the nueral network using backpropagation had to be run again. The most optimal outcome that could be achieved given the data preprocessing above and using a low model complexitiy nueral network(7 input layers, 2 hidden layers with 4 nodes, 1 ouput layer) was ~69.5% accuracy. As model complexity increased either by doubling the nodes, or adding more hidden layers, the accuracy would drop and require more time to train. An intersting observation was made when looking at the training time of the neural network using backpropagation, it was not consistent relative to the other local random search algorithms.  
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("ggplot2")
+library("GGally")
+library("reshape2")
+
+df_backprop = read.csv('./Backprop_1_hidden_4_nodes.txt', col.names = c("accuracy", "train_time", "test_time"))
+df_backprop['method'] = 'Backprop'
+df_backprop['execution'] = seq(1, length(df_backprop$method))
+
+df_rhc = read.csv('./RHC_1_hidden_4_nodes.txt', col.names = c("accuracy", "train_time", "test_time"))
+df_rhc['method'] = 'RHC'
+df_rhc['execution'] = seq(1, length(df_rhc$method))
+
+df_sa = read.csv('./SA_1_hidden_4_nodes.txt', col.names = c("accuracy", "train_time", "test_time"))
+df_sa['method'] = 'SA'
+df_sa['execution'] = seq(1, length(df_sa$method))
+
+df_ga = read.csv('./GA_1_hidden_4_nodes.txt', col.names = c("accuracy", "train_time", "test_time"))
+df_ga['method'] = 'GA'
+df_ga['execution'] = seq(1, length(df_ga$method))
+
+df <- rbind(df_backprop, df_sa, df_rhc, df_ga)
+
+accuaracy <- ggplot(df, mapping = aes(x=execution, y = accuracy, color=method)) +
+  geom_line() 
+
+training <- ggplot(df, mapping = aes(x=execution, y = train_time, color=method)) +
+  geom_line() 
+
+test <- ggplot(df, mapping = aes(x=execution, y = test_time, color=method)) +
+  geom_line() 
+
+grid.arrange(accuaracy, training, test, ncol = 2)
+
+```
+# Randomized Hill Climbing
+
+With Randomized Hill Climbing, the goal is to get the to the global maxima or "biggest hill" within the fitness landscape. The graph in figure one compares the accuracy over number of executions, which demonstrates the outcome of the hill climbing. From what can be seen from the graph the randomized hill climbing can sometimes converge on a local maxima, and took about 100 executions of a 1000 iterations to get to the global maxima. The global maxima, or the optimal fitness value, can be justified by looking at the change in accuracy for the preceeding 50 executions, which there is none. When looking at the optimal fitness value with respect to the training time, and testing time per execution, randomized hill climbing is relatively cheap for both. 
+
+# Simulated Annealing 
+
+Simulated annealing slightly under performed in comparsion to RHC with respect to fitness, the training and testing time was roughly the same. This could be related to the nature of simulated annealing, which allows for accepting worse solutions, but trys to decrease the probability of accepting the worse solution. This results in a more extensive search through the fitness landscape. Looking at the graph above, the drop in fitness at the beginning by both RHC and SA, seems to be amplified for SA due to the "annealing" part of Simulated Annealing.
+
+
+# Genetic Algorithm
+
+The Genetic Algorithm had the worst and most varying fitness of all the results. When comparing the results of genetic algorithm to other local random search algorithms it is important to understand how it works. The algorithm iteratively updates the population by evaluting each member using the fitness function. A new population is generated by applying the crossover and mutate to the most fit from the previous population. Firstly, the algorithm starts off by generating a population at random. This random selection combined with crossover can mean that a new hypothesis can be radically different from the previous. In some cases this can lead to "crowding", which reduces the diversity of the population and drastically slows the progress made by the genetic algorthim. The crowding seems to be apparant in the graph above with the max fitness at only ~9% for a population size of 200. Other runs of this algorthim have produced varying results. The biggest problem with algorithm being the amount of training time required. It is very apparent with this particular data set that algorithm training iterations are very slow. Even when running on a high powered machine (i7 quad core w/hyperthreading, 32 gbs of ram) the algorithm is still ran very slow. This algorithm seems like a great candidate for parallalization, some overhead might be added to manage the threads, but the speed up of having each thread process genetic operations for a partitioned set of the population would be very beneifical.
+
+
+# Traveling Salesman Problem
+
+The Traveling Salesman problem is simply, given a list of cities and the distance between each pair of cities, what is the shortest possible path that visits each city and returns to the origin city. This problem is interesting for a couple reasons, one because of the problem being NP-hard, another because this problem can be seen in our daily lifes just by simply ordering a product online. It's up to the company shipping the product to solve this problem for themselves. For each algorithm, a series of 5 trials were run. Each trial includes running 3001 iterations for every combination of specifically choosen hyperparameters. This method helps demonstrate the fitness landscape of all the chosen hyperparameter combinations.
+
+## Genetic Algorithm
+
+Almost all hyperparameter combinations ran for the Genetic Algorithm required much less iterations and achieved a much higher overall fitness, more consistently than the other algorithms. This could be attributed to the nature of Genetic Algorithms, since the algorithm determines the most fit from the population and applies genetic operations to only that segment of the population. Crossover, which produces a child hypothesis from combining the two parents, works on keeping the positive attibutes of the fittest parents, while mutation works on making random changes to a hypothesis, typically generated from crossover. These two genetic operators are what make this algorithm so successful in converging on the optimal fitness in the fitness landscape.
+
+## MIMIC
+
+When looking at the graph illustrating fitness versus iteration of MIMIC, it appears that MIMIC may be stuck in a local maxima. Most combinations of hyperparameters result in this algorithm getting stuck at ~.02 fitness. Overall, MIMIC is not a good algorithm for this type of problem due to nature of the problem and the nature MIMIC. MIMIC communicates information about the cost function from one iteration to another. This results in the algorithm propagating a cost function that keeps future iterations stuck in the local maxima. The problem has many different paths that can be traversed and it seems reasonable to assume the possibilty that MIMIC found a path that seems optimal but is not, due to the amount of possible paths. Along with of the issues mentioned above, MIMIC requires significant amounts of training time. 
+
+## Randomized Hill Climbing
+
+With the Traveling Salesman problem, there are more possible local optima, this is to the detriment of Randomized Hill Climbing. The algorithm is going to pick a point at random, then hill climb to the maxima, which will more than likely be a local maxima, and restart again. For problem with a large fitness landscape, that contains a large amount of local optima, it's going to be easier for hill climbing algorithms to get stuck. The graph representing fitness versus iterations illustrates the overall issue with this algorithm.
+
+## Simulated Annealing
+
+Simulated Annealing had the same issues as Randomized Hill Climbing. However, one difference that is caused by annealing, is the acceptance of a worse solution. This issue is briefly apparent in the graph comparing fitness with iterations for a subset of the hyperparameter combinations, where they hover around ~.02 fitness before jumping up around ~.06. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tsp_ga = read.csv('../TSP/TSP_GA_LOG.txt', col.names = c("iterations", "fitness", "time", "pop", "mate", "mutate", "trial"))
+
+tsp_mimic = read.csv('../TSP/TSP_MIMIC_LOG.txt', col.names = c("iterations", "fitness", "time", "samples", "keep", "m", "trial"))
+
+tsp_rhc = read.csv('../TSP/TSP_RHC_LOG.txt', col.names = c("iterations", "fitness", "time", "trial"))
+
+tsp_sa = read.csv('../TSP/TSP_SA_LOG.txt', col.names = c("iterations", "fitness", "time", "CE", "trial"))
+
+ga <- ggplot(tsp_ga, mapping = aes(x=iterations, y = fitness, color=interaction(pop, mate, mutate, trial))) +
+   geom_point() +
+  ggtitle("GA") + theme(legend.position="none")
+
+mimic <- ggplot(tsp_mimic, mapping = aes(x=iterations, y = fitness, color=interaction(samples, keep, m, trial))) +
+   geom_point() +
+   ggtitle("MIMIC") + theme(legend.position="none")
+  
+rhc <- ggplot(tsp_rhc, mapping = aes(x=iterations, y = fitness, color=trial)) +
+   geom_point() +
+   ggtitle("RHC") + theme(legend.position="none")
+
+sa <- ggplot(tsp_sa, mapping = aes(x=iterations, y = fitness, color=interaction(CE, trial))) +
+   geom_point() +
+   ggtitle("SA") + theme(legend.position="none")
+
+
+grid.arrange(ga, mimic, rhc, sa, ncol = 2)
+```
+
+# Continous Peaks Problem
+
+The Continuous Peaks problem is a more complex variation on the conventional Four Peaks problem. In the Four Peaks problem, fitness is maximized if a string is able to get both the reward of 100 and if the length of one head or tail is as large as possible, forcing 1's and 0's on opposite end of the solution string. With Continous Peaks, The 1’s and 0’s can be formed anywhere in the solution string. A reward is given when there are greater than T contiguous bits set to 0, and greater than T contiguous bits set to 1. For each algorithm, a series of 5 trials were run. Each trial includes running 5001 iterations for every combination of specifically choosen hyperparameters. This method helps demonstrate the fitness landscape of all the chosen hyperparameter combinations.
+
+## Genetic Algorithm
+
+The Genetic Algorithm didn't quite have the same elongated training time as MIMIC. However, when comparing it with Randomized Hill Climbing and Simulated Annealing, it had much higher training time. Between the training and the number of iterations needed to get to a fitness of 100, the Genetic Algorithm is a sub optimal algorithm for this type of problem. One thing that could be done differently is to not keep the population size constant. The population size was kept constant due to performance constrants and comparsion of other hyperparameters. 
+
+## MIMIC
+
+When looking at MIMIC's results for all hyperparameter combinations, comparing fitness to the number of iterations. MIMIC will a reach higher suboptimal fitness with relatively fewer iterations. The most optimal fitness(100 samples, 50 keep, m 0.5, trial 4) can be achieved when using the same number of iterations as GA when using its most optimal hyperparameter configuration. The overall problem with MIMIC is that a higher suboptimal fitness can be achieved with fewer iterations but the training time it takes to produce those results doesn't hold to today's standards.
+
+## Randomized Hill Climbing
+
+Randomized Hill Climbing definitely is a more optimal algorithm for this type of optimization problem. The fourth trial, at just under 4000 iterations, gets to the fitness of 100. Randomized Hill Climbing has similiar results to the Simulated Annealing in both fitness and training time. while training time in most cases is very low, the number of trials and iterations needed can be much higher. That could be a result of randomly choosing points after getting to a local maxima.
+
+## Simulated Annealing
+
+Simulated Annealing performed the best with respect to the other algorithms for this optimization problem. This algorithm was able to converge on the optimal fitness of 100 with more of the hyperparameter combinations and with less iterations than all the other algorithms. When combining the more frequent convergence on the optimal fitness with the small amount of training time required, the best performance assertion holds. 
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+contpeak_ga = read.csv('../CONTPEAKS/CONTPEAKS_GA_LOG.txt', col.names = c("iterations", "fitness", "time", "pop", "mate", "mutate", "trial"))
+
+contpeak_mimic = read.csv('../CONTPEAKS/CONTPEAKS_MIMIC_LOG.txt', col.names = c("iterations", "fitness", "time", "samples", "keep", "m", "trial"))
+
+contpeak_rhc = read.csv('../CONTPEAKS/CONTPEAKS_RHC_LOG.txt', col.names = c("iterations", "fitness", "time", "trial"))
+
+contpeak_sa = read.csv('../CONTPEAKS/CONTPEAKS_SA_LOG.txt', col.names = c("iterations", "fitness", "time", "CE", "trial"))
+
+ga <- ggplot(contpeak_ga, mapping = aes(x = iterations, y = fitness, color=interaction(pop, mate, mutate, trial))) +
+    geom_point() +
+    ggtitle("GA") + theme(legend.position="none")
+
+mimic <- ggplot(contpeak_mimic, mapping = aes(x = iterations, y = fitness, color=interaction(samples, keep, m, trial))) +
+    geom_point() +
+    ggtitle("MIMIC") + theme(legend.position="none")
+  
+rhc <- ggplot(contpeak_rhc, mapping = aes(x = iterations, y = fitness, color=trial)) +
+   geom_point() +
+   ggtitle("RHC") + theme(legend.position="none")
+
+sa <- ggplot(contpeak_sa, mapping = aes(x = iterations, y = fitness, color=interaction(CE,trial))) +
+   geom_point() +
+   ggtitle("SA") + theme(legend.position="none")
+
+grid.arrange(ga, mimic, rhc, sa, ncol = 2)
+```
+
+
+# Flip Flop Problem
+
+The Flip flop problem is essentially counting how many elements are different from their predecessors in an input vector. The vectors with highest fitness would then be patterns. This problem was choosen to better undertstnad the problem and understand a problem where using MIMIC makes sense. For each algorithm, a series of 5 trials were run. Each trial includes running 3001 iterations for every combination of specifically choosen hyperparameters.
+
+## Genetic Algorithm, Randomized Hill Climbing and Simulated Annealing
+
+The Genetic Algorithm performed the worst out of all the algorithms. This is attributed to the fact that this value is more about the structure, which favors MIMIC. Genetic Algorithm, Randomized Hill Climbing, and Simulated Annealing  all struggle when they see values that are both optima and differnet. 
+
+## MIMIC
+
+As mentioned above MIMIC performs well when structure matters. With this problem, where there is alternating bits and multiple optima exists, MIMIC performs the best overall. Structure just equates to having information about the previous itertaion and mimic excels when the cost of the fitness function is expensive. That being said, the trade off still exists with training time. As can be seen from the graph, mimic takes fewer iterations to converge to the optimal fitness but each iteration requires a lot more time due to the fact that MIMIC draws from a distibution, computes the performance and then re-generates a new distribution. 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+flipflop_ga = read.csv('../FLIPFLOP/FLIPFLOP_GA_LOG.txt', col.names = c("iterations", "fitness", "time", "pop", "mate", "mutate", "trial"))
+
+flipflop_mimic = read.csv('../FLIPFLOP/FLIPFLOP_MIMIC_LOG.txt', col.names = c("iterations", "fitness", "time", "samples", "keep", "m", "trial"))
+
+flipflop_rhc = read.csv('../FLIPFLOP/FLIPFLOP_RHC_LOG.txt', col.names = c("iterations", "fitness", "time", "trial"))
+
+flipflop_sa = read.csv('../FLIPFLOP/FLIPFLOP_SA_LOG.txt', col.names = c("iterations", "fitness", "time", "CE", "trial"))
+
+ga <- ggplot(flipflop_ga, mapping = aes(x=iterations, y = fitness, color=interaction(pop, mate, mutate, trial))) +
+   geom_point() +
+  ggtitle("GA") + theme(legend.position="none")
+
+mimic <- ggplot(flipflop_mimic, mapping = aes(x=iterations, y = fitness, color=interaction(samples, keep, m, trial))) +
+   geom_point() +
+   ggtitle("MIMIC") + theme(legend.position="none")
+  
+rhc <- ggplot(flipflop_rhc, mapping = aes(x=iterations, y = fitness, color=trial)) +
+   geom_point() +
+   ggtitle("RHC") + theme(legend.position="none")
+
+sa <- ggplot(flipflop_sa, mapping = aes(x=iterations, y = fitness, color=interaction(CE, trial))) +
+   geom_point() +
+   ggtitle("SA") + theme(legend.position="none")
+
+grid.arrange(ga, mimic, rhc, sa, ncol = 2)
+```
+
+
+# Timing comparsion of algorthims
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("dplyr")
+
+
+create.time.fitness.dataframe <- function (problem_ga, problem_mimc, problem_rhc, problem_sa) {
+  problem_ga["algorithm"] = "GA"
+  problem_mimc["algorithm"] = "MIMIC"
+  problem_rhc["algorithm"] = "RHC"
+  problem_sa["algorithm"] = "SA"
+  
+  df <- data.frame(time =  bind_rows(problem_mimc[3], problem_ga[3], problem_rhc[3], problem_sa
+                                  [3]),
+                  fitness = bind_rows(problem_mimc[2], problem_ga[2], problem_rhc[2], problem_sa
+                                   [2]),
+                  algorithm = bind_rows(problem_mimc[8], problem_ga[8], problem_rhc[5], problem_sa
+                                  [6]))
+  
+  return(df)
+}
+
+df_contpeak <- create.time.fitness.dataframe(contpeak_ga, contpeak_mimic, contpeak_rhc, contpeak_sa)
+df_flipflop <- create.time.fitness.dataframe(flipflop_ga, flipflop_mimic, flipflop_rhc, flipflop_sa)
+df_tsp <- create.time.fitness.dataframe(tsp_ga, tsp_mimic, tsp_rhc, tsp_sa)
+
+
+cp <- ggplot(df_contpeak, mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Continous Peaks")
+
+cpwm <- ggplot(df_contpeak[df_contpeak$algorithm != "MIMIC",], mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Continous Peaks without MIMIC") + theme(legend.position="none")
+
+ff <- ggplot(df_flipflop, mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Flip Flop")
+
+ffwm <- ggplot(df_flipflop[df_flipflop$algorithm != "MIMIC",], mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Flip Flop without MIMIC") + theme(legend.position="none")
+
+tsp <- ggplot(df_tsp, mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Traveling Salesman")
+ 
+tspwm <- ggplot(df_tsp[df_tsp$algorithm != "MIMIC",], mapping = aes(x = fitness, y = time, color=algorithm)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Traveling Salesman without MIMIC") + theme(legend.position="none")
+
+grid.arrange(cp, cpwm, ff, ffwm, tsp, tspwm, ncol = 2)
+
+```
